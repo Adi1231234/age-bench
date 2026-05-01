@@ -577,6 +577,24 @@ function loadCache() {
     return JSON.parse(raw);
   } catch { return {}; }
 }
+function pruneStaleCacheEntries(cache, expectedKids, expectedAdults) {
+  let dropped = 0;
+  for (const id of Object.keys(cache)) {
+    const r = cache[id];
+    if (r.loadFailed) continue; // keep load failures regardless
+    const k = typeof r.kidTotal === 'number' ? r.kidTotal : null;
+    const a = typeof r.adultTotal === 'number' ? r.adultTotal : null;
+    if (k == null || a == null) continue;
+    if (k !== expectedKids || a !== expectedAdults) {
+      delete cache[id];
+      dropped++;
+    }
+  }
+  if (dropped > 0) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch {}
+  }
+  return dropped;
+}
 function clearCache() {
   localStorage.removeItem(CACHE_KEY);
   localStorage.removeItem(RUNNING_KEY);
@@ -615,6 +633,8 @@ $('runBtn').addEventListener('click', async () => {
   const items = await loadImages();
   log(`Loaded ${items.length} images (${manifest.kids.length} kids, ${manifest.adults.length} adults)`);
   const cache = loadCache();
+  const dropped = pruneStaleCacheEntries(cache, manifest.kids.length, manifest.adults.length);
+  if (dropped) log(`🧹 Dropped ${dropped} stale cached results (dataset size changed since last run)`);
   const results = [];
   // Seed results + chip states for cached variants
   for (const v of VARIANTS) {
@@ -682,6 +702,8 @@ $('clearBtn').addEventListener('click', () => {
   const crashed = detectCrashedFromLastRun();
   if (crashed) log(`💥 שיחזרתי קריסה מהריצה הקודמת: ${crashed.id} סומן כ-fail ולא יורץ שוב`);
   const cache = loadCache();
+  const dropped = pruneStaleCacheEntries(cache, manifest.kids.length, manifest.adults.length);
+  if (dropped) log(`🧹 Dropped ${dropped} stale cached results (dataset size changed since last run)`);
   for (const v of VARIANTS) {
     if (cache[v.id]) {
       variantState[v.id] = cache[v.id].loadFailed ? 'fail' : cache[v.id].timedOut ? 'timeout' : 'cached';
