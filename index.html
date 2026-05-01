@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Age Detection Benchmark</title>
+<style>
+  :root {
+    --bg: #0a0a12;
+    --surface: #14141d;
+    --surface-2: #1c1c28;
+    --border: #2a2a38;
+    --border-2: #353548;
+    --text: #e5e5ec;
+    --muted: #8e8ea0;
+    --primary: #a78bfa;
+    --primary-glow: rgba(167, 139, 250, 0.4);
+    --success: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --info: #38bdf8;
+    --gradient-primary: linear-gradient(135deg, #a78bfa, #f472b6, #fbbf24);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  /* Header */
+  .hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+  .hero h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero h1 .icon { display: inline-block; vertical-align: middle; margin-inline-end: 8px; font-size: 32px; filter: drop-shadow(0 0 12px var(--primary-glow)); }
+  .hero p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Buttons */
+  .btn {
+    border: 0; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
+    padding: 12px 20px; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--gradient-primary); color: #1a1a1a; }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px var(--primary-glow); }
+  .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border-2); }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); border-color: var(--primary); }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .timeout-input { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border-2); font-size: 12px; color: var(--muted); }
+  .timeout-input input { width: 70px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; font-family: 'JetBrains Mono', 'Consolas', monospace; text-align: center; }
+  .timeout-input input:focus { outline: none; border-color: var(--primary); }
+
+  /* Dataset summary cards */
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 24px; font-weight: 700; }
+  .stat-card.kids { border-inline-start: 3px solid var(--info); }
+  .stat-card.adults { border-inline-start: 3px solid var(--warn); }
+  .stat-card.total { border-inline-start: 3px solid var(--primary); }
+  .stat-card.variants { border-inline-start: 3px solid var(--success); }
+
+  /* Section card */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-bottom: 20px; }
+  .section h2 { margin: 0 0 14px; font-size: 16px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+
+  /* Current running banner */
+  .current-banner {
+    background: linear-gradient(135deg, rgba(167,139,250,0.12), rgba(244,114,182,0.08));
+    border: 1px solid rgba(167,139,250,0.3);
+    border-radius: 12px; padding: 18px 20px;
+    display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center;
+  }
+  .current-banner.idle { background: var(--surface-2); border-color: var(--border-2); }
+  .current-banner .badge {
+    background: var(--gradient-primary); color: #1a1a1a; font-weight: 700;
+    border-radius: 999px; padding: 6px 12px; font-size: 13px; white-space: nowrap;
+  }
+  .current-banner.idle .badge { background: var(--surface); color: var(--muted); border: 1px solid var(--border-2); }
+  .current-banner .title { font-size: 18px; font-weight: 700; }
+  .current-banner .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .current-banner .right { font-size: 13px; color: var(--muted); text-align: end; }
+  .current-banner .right strong { color: var(--text); font-size: 16px; display: block; }
+
+  /* Progress bars */
+  .progress-stack { display: grid; gap: 10px; margin-top: 14px; }
+  .progress-row { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: center; font-size: 12px; }
+  .progress-row .pl { color: var(--muted); }
+  .progress { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; height: 10px; overflow: hidden; }
+  .progress > div { height: 100%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 999px; }
+  .progress-images > div { background: var(--gradient-primary); }
+  .progress-variants > div { background: linear-gradient(90deg, #38bdf8, #22c55e); }
+  .progress-row .pv { color: var(--text); font-variant-numeric: tabular-nums; min-width: 70px; text-align: end; }
+
+  /* Variant strip */
+  .strip { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+    border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border);
+    font-size: 12px; font-weight: 500; transition: all 0.2s ease;
+  }
+  .chip .icon { font-size: 14px; }
+  .chip .name { font-family: 'JetBrains Mono', 'Consolas', monospace; }
+  .chip.queued { color: var(--muted); }
+  .chip.running { background: linear-gradient(135deg, rgba(167,139,250,0.25), rgba(244,114,182,0.15)); border-color: var(--primary); color: var(--text); box-shadow: 0 0 0 3px var(--primary-glow); animation: pulse 1.6s ease-in-out infinite; }
+  .chip.done { background: rgba(34,197,94,0.12); border-color: var(--success); color: #bbf7d0; }
+  .chip.cached { background: rgba(56,189,248,0.10); border-color: var(--info); color: #bae6fd; }
+  .chip.fail { background: rgba(239,68,68,0.12); border-color: var(--danger); color: #fecaca; }
+  .chip.timeout { background: rgba(245,158,11,0.12); border-color: var(--warn); color: #fde68a; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--primary-glow); } 50% { box-shadow: 0 0 0 6px rgba(167,139,250,0.15); } }
+
+  /* Results table */
+  .results-wrap { overflow-x: auto; margin: 0 -24px; padding: 0 24px; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+  thead th {
+    text-align: start; padding: 12px 14px; background: var(--surface-2);
+    color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+    font-weight: 600; border-bottom: 1px solid var(--border-2);
+    position: sticky; top: 0; z-index: 1;
+  }
+  thead th:first-child { border-top-right-radius: 8px; }
+  thead th:last-child { border-top-left-radius: 8px; }
+  tbody td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:hover { background: var(--surface-2); }
+  tbody tr.best td { background: linear-gradient(90deg, rgba(34,197,94,0.10), transparent); border-bottom-color: rgba(34,197,94,0.3); }
+  tbody tr.fail td { background: rgba(239,68,68,0.05); color: var(--muted); }
+
+  .rank { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border-2); font-weight: 700; font-size: 12px; }
+  .rank.gold { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1a1a1a; border-color: transparent; box-shadow: 0 0 12px rgba(251,191,36,0.4); }
+  .rank.silver { background: linear-gradient(135deg, #d1d5db, #9ca3af); color: #1a1a1a; border-color: transparent; }
+  .rank.bronze { background: linear-gradient(135deg, #f97316, #b45309); color: white; border-color: transparent; }
+
+  .score { display: inline-flex; align-items: center; gap: 8px; }
+  .score-num { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .score-bar { width: 80px; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .score-bar > div { height: 100%; background: var(--gradient-primary); }
+
+  .acc-cell { display: flex; flex-direction: column; gap: 3px; min-width: 110px; }
+  .acc-bar { height: 4px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .acc-bar > div { height: 100%; }
+  .acc-good { background: var(--success); }
+  .acc-mid  { background: var(--warn); }
+  .acc-bad  { background: var(--danger); }
+
+  .model-cell { display: flex; flex-direction: column; gap: 2px; }
+  .model-name { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 12px; color: var(--text); word-break: break-all; }
+  .model-meta { font-size: 11px; color: var(--muted); }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border-2); font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+
+  .err { color: var(--danger); font-size: 12px; }
+  .empty { color: var(--muted); padding: 40px 20px; text-align: center; font-size: 13px; }
+
+  /* Log */
+  details.log-section { margin-top: 20px; }
+  details.log-section > summary { cursor: pointer; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 13px; user-select: none; }
+  details.log-section[open] > summary { border-radius: 10px 10px 0 0; border-bottom: 0; }
+  .log {
+    background: #08080d; border: 1px solid var(--border); border-top: 0;
+    border-radius: 0 0 10px 10px; padding: 12px 16px; max-height: 240px; overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11.5px; white-space: pre-wrap;
+    color: #c4c4d2;
+  }
+  .log:empty::before { content: 'הריצה לא התחילה. הקונסול יופיע כאן.'; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="hero">
+    <div>
+      <h1><span class="icon">🪄</span>Age Detection Benchmark</h1>
+      <p>השוואת מודלי זיהוי גיל בדפדפן: דיוק, מהירות וציון משוקלל. הכל רץ לוקלית.</p>
+    </div>
+    <div class="hero-actions">
+      <label class="timeout-input">
+        <span>Timeout (שניות)</span>
+        <input id="timeoutInput" type="number" min="10" max="3600" step="10" value="150">
+      </label>
+      <button id="runBtn" class="btn btn-primary">▶ הרץ benchmark</button>
+      <button id="downloadBtn" class="btn btn-secondary" disabled>⬇ הורד JSON</button>
+      <button id="clearBtn" class="btn btn-ghost">🗑 נקה cache</button>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="stat-card kids"><span class="label">ילדים</span><span class="value" id="statKids">—</span></div>
+    <div class="stat-card adults"><span class="label">מבוגרים</span><span class="value" id="statAdults">—</span></div>
+    <div class="stat-card total"><span class="label">סה"כ תמונות</span><span class="value" id="statTotal">—</span></div>
+    <div class="stat-card variants"><span class="label">וריאנטים</span><span class="value" id="statVariants">—</span></div>
+  </div>
+
+  <div class="section">
+    <h2>סטטוס הרצה</h2>
+    <div id="currentBanner" class="current-banner idle">
+      <div class="badge" id="banBadge">ממתין</div>
+      <div>
+        <div class="title" id="banTitle">לחץ "הרץ benchmark" כדי להתחיל</div>
+        <div class="meta" id="banMeta">מודלים שכבר רצו פעם קודמת ייטענו אוטומטית מ-cache</div>
+      </div>
+      <div class="right" id="banRight"></div>
+    </div>
+    <div class="progress-stack">
+      <div class="progress-row">
+        <span class="pl">תמונות בוריאנט</span>
+        <div class="progress progress-images"><div id="progBar"></div></div>
+        <span class="pv" id="progText">0/0</span>
+      </div>
+      <div class="progress-row">
+        <span class="pl">וריאנטים סה"כ</span>
+        <div class="progress progress-variants"><div id="progBarVar"></div></div>
+        <span class="pv" id="progTextVar">0/0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>וריאנטים <span style="color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0;">(<span id="legend">⏳ ממתין · 📦 מ-cache · ▶ רץ · ✓ הסתיים · ⏱ timeout · ✗ כשל</span>)</span></h2>
+    <div id="strip" class="strip"></div>
+  </div>
+
+  <div class="section">
+    <h2>תוצאות</h2>
+    <div class="results-wrap">
+      <table id="resultsTable" hidden>
+        <thead>
+          <tr>
+            <th>#</th><th>ציון</th><th>מודל</th><th>משקל</th><th>הגדרות</th>
+            <th>דיוק כללי</th><th>ילדים</th><th>מבוגרים</th>
+            <th>זמן ממוצע</th><th>זמן כולל</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+      <div id="emptyResults" class="empty">אין תוצאות עדיין. לחץ "הרץ benchmark" כדי להתחיל.</div>
+    </div>
+  </div>
+
+  <details class="log-section">
+    <summary>📋 קונסול ריצה</summary>
+    <div id="log" class="log"></div>
+  </details>
+
+</div>
+<script type="module" src="./bench.js"></script>
+</body>
+</html>
