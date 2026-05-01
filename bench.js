@@ -469,8 +469,8 @@ function renderResults(results) {
   });
 }
 
-const CACHE_KEY = 'age-bench-results-v5';
-const RUNNING_KEY = 'age-bench-running-v5';
+const CACHE_KEY = 'age-bench-results-v6';
+const RUNNING_KEY = 'age-bench-running-v6';
 const SIZE_CACHE_KEY = 'age-bench-sizes-v1';
 
 const TRANSFORMERS_DTYPE_TO_FILE = {
